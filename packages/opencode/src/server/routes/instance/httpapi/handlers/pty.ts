@@ -35,15 +35,9 @@ const ticketScope = Effect.gen(function* () {
   return { directory: instance?.directory, workspaceID }
 })
 
-const notFound = (ptyID: PtyID) =>
-  new ApiError.PtyNotFoundError({ ptyID, message: `PTY session not found: ${ptyID}` })
-
 // Legacy surface compatibility: before exited-session retention, sessions vanished the moment
 // their process exited. These routes preserve that observable behavior — exited sessions are
 // invisible here — while the canonical /api/pty surface exposes them until removal.
-const requireRunning = (info: Pty.Info, ptyID: PtyID) =>
-  info.status === "running" ? Effect.succeed(info) : Effect.fail(notFound(ptyID))
-
 export const ptyHandlers = HttpApiBuilder.group(InstanceHttpApi, "pty", (handlers) =>
   Effect.gen(function* () {
     const tickets = yield* PtyTicket.Service
@@ -89,8 +83,22 @@ export const ptyHandlers = HttpApiBuilder.group(InstanceHttpApi, "pty", (handler
 
     const get = Effect.fn("PtyHttpApi.get")(function* (ctx: { params: { ptyID: PtyID } }) {
       return yield* pty(Pty.Service.use((service) => service.get(ctx.params.ptyID))).pipe(
-        Effect.catchTag("Pty.NotFoundError", (error) => Effect.fail(notFound(error.ptyID))),
-        Effect.flatMap((info) => requireRunning(info, ctx.params.ptyID)),
+        Effect.catchTag(
+          "Pty.NotFoundError",
+          (error) =>
+            new ApiError.PtyNotFoundError({
+              ptyID: error.ptyID,
+              message: `PTY session not found: ${error.ptyID}`,
+            }),
+        ),
+        Effect.flatMap((info) =>
+          info.status === "running"
+            ? Effect.succeed(info)
+            : new ApiError.PtyNotFoundError({
+                ptyID: ctx.params.ptyID,
+                message: `PTY session not found: ${ctx.params.ptyID}`,
+              }),
+        ),
       )
     })
 
@@ -106,13 +114,29 @@ export const ptyHandlers = HttpApiBuilder.group(InstanceHttpApi, "pty", (handler
             size: ctx.payload.size ? { ...ctx.payload.size } : undefined,
           }),
         ),
-      ).pipe(Effect.catchTag("Pty.NotFoundError", (error) => Effect.fail(notFound(error.ptyID))))
+      ).pipe(
+        Effect.catchTag(
+          "Pty.NotFoundError",
+          (error) =>
+            new ApiError.PtyNotFoundError({
+              ptyID: error.ptyID,
+              message: `PTY session not found: ${error.ptyID}`,
+            }),
+        ),
+      )
     })
 
     const remove = Effect.fn("PtyHttpApi.remove")(function* (ctx: { params: { ptyID: PtyID } }) {
       yield* get(ctx)
       yield* pty(Pty.Service.use((service) => service.remove(ctx.params.ptyID))).pipe(
-        Effect.catchTag("Pty.NotFoundError", (error) => Effect.fail(notFound(error.ptyID))),
+        Effect.catchTag(
+          "Pty.NotFoundError",
+          (error) =>
+            new ApiError.PtyNotFoundError({
+              ptyID: error.ptyID,
+              message: `PTY session not found: ${error.ptyID}`,
+            }),
+        ),
       )
       return true
     })

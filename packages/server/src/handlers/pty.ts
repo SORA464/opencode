@@ -1,6 +1,5 @@
 import { Pty } from "@opencode-ai/core/pty"
 import { PtyProtocol } from "@opencode-ai/core/pty/protocol"
-import { PtyID } from "@opencode-ai/core/pty/schema"
 import { PtyTicket } from "@opencode-ai/core/pty/ticket"
 import { Location } from "@opencode-ai/core/location"
 import { Effect, Queue } from "effect"
@@ -16,10 +15,6 @@ import {
   PTY_CONNECT_TOKEN_HEADER_VALUE,
 } from "../groups/pty"
 import { response } from "../groups/location"
-
-function missingSession(id: PtyID) {
-  return new PtyNotFoundError({ ptyID: id, message: `PTY session not found: ${id}` })
-}
 
 const ticketScope = Effect.gen(function* () {
   const location = yield* Location.Service
@@ -58,7 +53,16 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
           return yield* response(
             pty
               .get(ctx.params.ptyID)
-              .pipe(Effect.catchTag("Pty.NotFoundError", () => missingSession(ctx.params.ptyID))),
+              .pipe(
+                Effect.catchTag(
+                  "Pty.NotFoundError",
+                  () =>
+                    new PtyNotFoundError({
+                      ptyID: ctx.params.ptyID,
+                      message: `PTY session not found: ${ctx.params.ptyID}`,
+                    }),
+                ),
+              ),
           )
         }),
       )
@@ -72,7 +76,16 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
                 ...ctx.payload,
                 size: ctx.payload.size ? { ...ctx.payload.size } : undefined,
               })
-              .pipe(Effect.catchTag("Pty.NotFoundError", () => missingSession(ctx.params.ptyID))),
+              .pipe(
+                Effect.catchTag(
+                  "Pty.NotFoundError",
+                  () =>
+                    new PtyNotFoundError({
+                      ptyID: ctx.params.ptyID,
+                      message: `PTY session not found: ${ctx.params.ptyID}`,
+                    }),
+                ),
+              ),
           )
         }),
       )
@@ -82,7 +95,16 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
           const pty = yield* Pty.Service
           yield* pty
             .remove(ctx.params.ptyID)
-            .pipe(Effect.catchTag("Pty.NotFoundError", () => missingSession(ctx.params.ptyID)))
+            .pipe(
+              Effect.catchTag(
+                "Pty.NotFoundError",
+                () =>
+                  new PtyNotFoundError({
+                    ptyID: ctx.params.ptyID,
+                    message: `PTY session not found: ${ctx.params.ptyID}`,
+                  }),
+              ),
+            )
           return HttpApiSchema.NoContent.make()
         }),
       )
@@ -100,7 +122,16 @@ export const PtyHandler = HttpApiBuilder.group(Api, "server.pty", (handlers) =>
           const pty = yield* Pty.Service
           yield* pty
             .get(ctx.params.ptyID)
-            .pipe(Effect.catchTag("Pty.NotFoundError", () => missingSession(ctx.params.ptyID)))
+            .pipe(
+              Effect.catchTag(
+                "Pty.NotFoundError",
+                () =>
+                  new PtyNotFoundError({
+                    ptyID: ctx.params.ptyID,
+                    message: `PTY session not found: ${ctx.params.ptyID}`,
+                  }),
+              ),
+            )
           return yield* response(tickets.issue({ ptyID: ctx.params.ptyID, ...(yield* ticketScope) }))
         }),
       )
