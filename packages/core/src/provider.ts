@@ -63,7 +63,6 @@ export class Info extends Schema.Class<Info>("ProviderV2.Info")({
       data: Schema.Record(Schema.String, Schema.Any),
     }),
   ]),
-  env: Schema.String.pipe(Schema.Array),
   api: Api,
   request: Request,
 }) {
@@ -72,7 +71,6 @@ export class Info extends Schema.Class<Info>("ProviderV2.Info")({
       id: providerID,
       name: providerID,
       enabled: false,
-      env: [],
       api: {
         type: "native",
         settings: {},

@@ -1,6 +1,7 @@
 import { describe, expect } from "bun:test"
 import { Effect } from "effect"
 import { Catalog } from "@opencode-ai/core/catalog"
+import { Integration } from "@opencode-ai/core/integration"
 import { PluginV2 } from "@opencode-ai/core/plugin"
 import { ProviderPlugins } from "@opencode-ai/core/plugin/provider"
 import { LLMGatewayPlugin } from "@opencode-ai/core/plugin/provider/llmgateway"
@@ -8,6 +9,14 @@ import { ProviderV2 } from "@opencode-ai/core/provider"
 import { expectPluginRegistered, it, provider } from "./provider-helper"
 
 describe("LLMGatewayPlugin", () => {
+  const add = Effect.fnUntraced(function* (plugin: PluginV2.Interface) {
+    const integrations = yield* Integration.Service
+    yield* plugin.add({
+      ...LLMGatewayPlugin,
+      effect: LLMGatewayPlugin.effect.pipe(Effect.provideService(Integration.Service, integrations)),
+    })
+  })
+
   it.effect("is registered so legacy referer headers can be applied", () =>
     Effect.sync(() =>
       expectPluginRegistered(
@@ -21,7 +30,7 @@ describe("LLMGatewayPlugin", () => {
     Effect.gen(function* () {
       const plugin = yield* PluginV2.Service
       const catalog = yield* Catalog.Service
-      yield* plugin.add(LLMGatewayPlugin)
+      yield* add(plugin)
       const transform = yield* catalog.transform()
       yield* transform((catalog) => {
         const llmgateway = provider("llmgateway", {
@@ -55,7 +64,7 @@ describe("LLMGatewayPlugin", () => {
     Effect.gen(function* () {
       const plugin = yield* PluginV2.Service
       const catalog = yield* Catalog.Service
-      yield* plugin.add(LLMGatewayPlugin)
+      yield* add(plugin)
       const transform = yield* catalog.transform()
       yield* transform((catalog) => {
         const item = provider("llmgateway", {

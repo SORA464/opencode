@@ -3,6 +3,7 @@ import { Effect, Option, Schema } from "effect"
 import { Catalog } from "@opencode-ai/core/catalog"
 import { Config } from "@opencode-ai/core/config"
 import { ConfigProviderPlugin } from "@opencode-ai/core/config/plugin/provider"
+import { Integration } from "@opencode-ai/core/integration"
 import { ModelV2 } from "@opencode-ai/core/model"
 import { PluginV2 } from "@opencode-ai/core/plugin"
 import { ProviderV2 } from "@opencode-ai/core/provider"
@@ -21,6 +22,7 @@ describe("ConfigProviderPlugin.Plugin", () => {
   it.effect("partitions existing model variant bodies without changing config shape", () =>
     Effect.gen(function* () {
       const catalog = yield* Catalog.Service
+      const integrations = yield* Integration.Service
       const plugin = yield* PluginV2.Service
       const providerID = ProviderV2.ID.opencode
       const modelID = ModelV2.ID.make("alpha-gpt-next")
@@ -59,6 +61,7 @@ describe("ConfigProviderPlugin.Plugin", () => {
         effect: ConfigProviderPlugin.Plugin.effect.pipe(
           Effect.provideService(Config.Service, config),
           Effect.provideService(Catalog.Service, catalog),
+          Effect.provideService(Integration.Service, integrations),
         ),
       })
 
@@ -80,6 +83,7 @@ describe("ConfigProviderPlugin.Plugin", () => {
   it.effect("uses the effective provider package across layered config", () =>
     Effect.gen(function* () {
       const catalog = yield* Catalog.Service
+      const integrations = yield* Integration.Service
       const plugin = yield* PluginV2.Service
       const providerID = ProviderV2.ID.opencode
       const modelID = ModelV2.ID.make("alpha-gpt-next")
@@ -118,6 +122,7 @@ describe("ConfigProviderPlugin.Plugin", () => {
         effect: ConfigProviderPlugin.Plugin.effect.pipe(
           Effect.provideService(Config.Service, config),
           Effect.provideService(Catalog.Service, catalog),
+          Effect.provideService(Integration.Service, integrations),
         ),
       })
 
@@ -133,6 +138,7 @@ describe("ConfigProviderPlugin.Plugin", () => {
   it.effect("loads configured providers and applies later model overrides", () =>
     Effect.gen(function* () {
       const catalog = yield* Catalog.Service
+      const integrations = yield* Integration.Service
       const plugin = yield* PluginV2.Service
       const providerID = ProviderV2.ID.make("custom")
       const modelID = ModelV2.ID.make("chat")
@@ -218,6 +224,7 @@ describe("ConfigProviderPlugin.Plugin", () => {
         effect: ConfigProviderPlugin.Plugin.effect.pipe(
           Effect.provideService(Config.Service, config),
           Effect.provideService(Catalog.Service, catalog),
+          Effect.provideService(Integration.Service, integrations),
         ),
       })
 
@@ -225,7 +232,10 @@ describe("ConfigProviderPlugin.Plugin", () => {
       const model = yield* catalog.model.get(providerID, modelID)
       expect(Option.getOrUndefined(yield* catalog.model.default())?.id).toBe(ModelV2.ID.make("default"))
       expect(provider.name).toBe("Renamed")
-      expect(provider.env).toEqual(["CUSTOM_API_KEY"])
+      expect((yield* integrations.get(Integration.ID.make("custom")))?.methods).toContainEqual(
+        { type: "env", names: ["CUSTOM_API_KEY"] },
+      )
+      expect((yield* integrations.get(Integration.ID.make("custom")))?.name).toBe("Renamed")
       expect(provider.enabled).toEqual({ via: "custom", data: {} })
       expect(provider.api).toEqual({ type: "aisdk", package: "custom-sdk", url: "https://example.test" })
       expect(provider.request.headers).toEqual({ first: "first", shared: "last", last: "last" })

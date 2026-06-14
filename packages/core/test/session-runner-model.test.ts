@@ -46,7 +46,6 @@ const provider = (api: ProviderV2.Info["api"]) =>
     id: ProviderV2.ID.make("test-provider"),
     name: "Test provider",
     enabled: { via: "env", name: "TEST_PROVIDER_API_KEY" },
-    env: ["TEST_PROVIDER_API_KEY"],
     api,
     request: { headers: {}, body: {} },
   })
