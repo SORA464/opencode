@@ -1,6 +1,6 @@
 import { useTerminalDimensions } from "@opentui/solid"
 import { TextAttributes } from "@opentui/core"
-import { createMemo, createResource, createSignal, onMount, Show } from "solid-js"
+import { createMemo, createResource, createSignal, ErrorBoundary, onMount, Show } from "solid-js"
 import path from "path"
 import { DialogSelect, type DialogSelectOption } from "../ui/dialog-select"
 import { useDialog } from "../ui/dialog"
@@ -12,7 +12,7 @@ import { useTuiPaths } from "../context/runtime"
 import { Locale } from "../util/locale"
 import { errorMessage } from "../util/error"
 import { useToast } from "../ui/toast"
-import { useCommandShortcut } from "../keymap"
+import { useBindings, useCommandShortcut } from "../keymap"
 import { useProject } from "../context/project"
 import { Spinner } from "./spinner"
 import { DialogWorkspaceFileChanges } from "./dialog-workspace-file-changes"
@@ -22,14 +22,26 @@ import { useRoute } from "../context/route"
 export type MoveSessionSelection = { type: "directory"; directory: string; subdirectory: boolean } | { type: "new" }
 type ProjectDirectory = ProjectDirectories[number]
 
-export function DialogMoveSession(props: {
+type DialogMoveSessionProps = {
   projectID: string
   current?: MoveSessionSelection
   onSelect: (selection: MoveSessionSelection) => void
   onCurrentChange?: (selection: MoveSessionSelection) => void
   initialDirectories?: ProjectDirectory[]
   initialRemoving?: string
-}) {
+}
+
+export function DialogMoveSession(props: DialogMoveSessionProps) {
+  const dialog = useDialog()
+  onMount(() => dialog.setSize("xlarge"))
+  return (
+    <ErrorBoundary fallback={(error, reset) => <DialogMoveSessionError error={error} retry={reset} />}>
+      <DialogMoveSessionContent {...props} />
+    </ErrorBoundary>
+  )
+}
+
+function DialogMoveSessionContent(props: DialogMoveSessionProps) {
   const dialog = useDialog()
   const sdk = useSDK()
   const dimensions = useTerminalDimensions()
@@ -73,13 +85,6 @@ export function DialogMoveSession(props: {
         )
         const directories = await sdk.client.project.directories({ projectID }, { throwOnError: true })
         return directories.data ?? []
-      } catch (error) {
-        toast.show({
-          variant: "error",
-          title: "Failed to load project directories",
-          message: errorMessage(error),
-        })
-        return []
       } finally {
         setWorking(false)
       }
@@ -271,8 +276,6 @@ export function DialogMoveSession(props: {
     if (await removedCurrent(deletingCurrent)) return
   }
 
-  onMount(() => dialog.setSize("xlarge"))
-
   return (
     <box minHeight={Math.max(8, Math.min(16, dimensions().height - Math.floor(dimensions().height / 4) - 2))}>
       <DialogSelect
@@ -317,6 +320,33 @@ export function DialogMoveSession(props: {
           },
         ]}
       />
+    </box>
+  )
+}
+
+function DialogMoveSessionError(props: { error: unknown; retry: () => void }) {
+  const { theme } = useTheme()
+  useBindings(() => ({
+    bindings: [
+      {
+        key: "return",
+        desc: "Retry loading project directories",
+        group: "Dialog",
+        cmd: props.retry,
+      },
+    ],
+  }))
+  return (
+    <box paddingLeft={2} paddingRight={2} paddingBottom={1} gap={1}>
+      <text attributes={TextAttributes.BOLD} fg={theme.text}>
+        Failed to load project directories
+      </text>
+      <text fg={theme.error}>{errorMessage(props.error)}</text>
+      <box flexDirection="row" justifyContent="flex-end">
+        <box paddingLeft={3} paddingRight={3} backgroundColor={theme.primary} onMouseUp={props.retry}>
+          <text fg={theme.selectedListItemText}>retry</text>
+        </box>
+      </box>
     </box>
   )
 }
