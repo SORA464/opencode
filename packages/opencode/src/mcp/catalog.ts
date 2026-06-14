@@ -64,6 +64,7 @@ export function convertTool(mcpTool: MCPToolDef, client: Client, timeout?: numbe
           timeout,
         },
       )
+      if (!isCallToolResult(result)) return result
       if (result.isError) throw new Error(errorText(result))
       if (result.structuredContent === undefined || result.structuredContent === null) return result
       return {
@@ -72,6 +73,10 @@ export function convertTool(mcpTool: MCPToolDef, client: Client, timeout?: numbe
       }
     },
   })
+}
+
+function isCallToolResult(result: Awaited<ReturnType<Client["callTool"]>>): result is CallToolResult {
+  return "content" in result && Array.isArray(result.content)
 }
 
 function errorText(result: CallToolResult) {

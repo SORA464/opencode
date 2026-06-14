@@ -9,7 +9,7 @@ const definition = {
   inputSchema: { type: "object" as const, properties: {} },
 }
 
-function tool(result: CallToolResult) {
+function tool(result: CallToolResult | { toolResult: unknown }) {
   const callTool = mock(async () => result)
   const converted = convertTool(definition, { callTool } as unknown as Client)
   if (!converted.execute) throw new Error("expected executable tool")
@@ -29,6 +29,13 @@ describe("mcp catalog", () => {
       content: [{ type: "text", text: '{"value":42}' }],
     })
     expect(converted.callTool).toHaveBeenCalledTimes(1)
+  })
+
+  test("returns task tool results", async () => {
+    const result = { toolResult: { taskId: "task-1" } }
+    const converted = tool(result)
+
+    await expect(converted.execute({}, { toolCallId: "call-1", messages: [] })).resolves.toBe(result)
   })
 
   test("throws MCP tool errors with text and structured diagnostics", async () => {
