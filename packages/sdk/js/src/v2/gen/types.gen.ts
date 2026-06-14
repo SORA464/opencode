@@ -10148,7 +10148,12 @@ export type V2CredentialRemoveData = {
   path: {
     credentialID: string
   }
-  query?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
   url: "/api/credential/{credentialID}"
 }
 
@@ -10181,7 +10186,12 @@ export type V2CredentialUpdateData = {
   path: {
     credentialID: string
   }
-  query?: never
+  query?: {
+    location?: {
+      directory?: string
+      workspace?: string
+    }
+  }
   url: "/api/credential/{credentialID}"
 }
 
