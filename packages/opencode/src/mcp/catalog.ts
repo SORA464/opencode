@@ -3,6 +3,7 @@ import {
   CallToolResultSchema,
   ListToolsResultSchema,
   ToolSchema,
+  type CallToolResult,
   type Tool as MCPToolDef,
 } from "@modelcontextprotocol/sdk/types.js"
 import { dynamicTool, jsonSchema, type JSONSchema7, type Tool } from "ai"
@@ -63,6 +64,7 @@ export function convertTool(mcpTool: MCPToolDef, client: Client, timeout?: numbe
           timeout,
         },
       )
+      if (result.isError) throw new Error(errorText(result))
       if (result.structuredContent === undefined || result.structuredContent === null) return result
       return {
         ...result,
@@ -70,6 +72,19 @@ export function convertTool(mcpTool: MCPToolDef, client: Client, timeout?: numbe
       }
     },
   })
+}
+
+function errorText(result: CallToolResult) {
+  const content = result.content.flatMap((item) => {
+    if (item.type === "text") return [item.text]
+    if (item.type === "resource" && "text" in item.resource) return [item.resource.text]
+    return []
+  })
+  if (result.structuredContent !== undefined && result.structuredContent !== null) {
+    const structured = JSON.stringify(result.structuredContent)
+    if (structured !== undefined) content.push(structured)
+  }
+  return [...new Set(content.filter((item) => item.trim().length > 0))].join("\n\n") || "MCP tool returned an error"
 }
 
 export function fetch<T extends { name: string }>(
