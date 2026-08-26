@@ -72,14 +72,27 @@ Headless server: `opencode serve --port <p> --hostname 127.0.0.1` (dev mode and 
 
 ## Modifications made during baseline establishment
 
-**None.** The tracked source tree is byte-identical to upstream `v1.18.14`
-(`git diff v1.18.14` is empty). No compatibility patches were required.
+Exactly **one** compatibility modification; all other tracked source is byte-identical to upstream
+`v1.18.14` for the entire product surface.
+
+1. **`packages/app/src/custom-elements.d.ts` and `packages/enterprise/src/custom-elements.d.ts`**
+   (classification: *required for compatibility*)
+   - Upstream stores these two files as git symlinks pointing at
+     `../../ui/src/custom-elements.d.ts`. This Windows checkout has no symlink privilege
+     (`core.symlinks=false`; Developer Mode/admin unavailable), so git materialized them as plain
+     text files containing the target path. TypeScript then failed (`TS1128`) when tsgo parsed the
+     path string, breaking `@opencode-ai/enterprise#typecheck` (and blocking the repo's pre-push
+     hook). Fix: replaced both stubs with the literal content of
+     `packages/ui/src/custom-elements.d.ts` — i.e. the exact declaration text a POSIX checkout
+     resolves to. No behavioral or API difference; 58 remaining symlinked asset paths (favicons,
+     images, openapi.json) are unaffected by tooling and were left untouched.
+   - Verified: full-workspace `bun turbo typecheck` = **30/30 tasks successful** after the change.
 
 Notes:
 
 - `bun.lock` / `packages/opencode/package.json` are transiently rewritten by bun with identical
   logical content (line endings only); restored via `git checkout --`. Not committed.
-- This documentation file is the sole addition.
+- On symlink-capable checkouts this commit is a functional no-op relative to v1.18.14.
 
 ## Known limitations / environment notes
 
