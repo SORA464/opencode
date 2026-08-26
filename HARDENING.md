@@ -108,3 +108,33 @@ verified. Full public-launch readiness additionally requires the cross-platform
 desktop verification, live-provider E2E, extended multi-day soak, and upstream
 coordination on the accepted transitive-dependency risks listed in Â§6 â€” these are
 outside what one platform session can honestly certify.
+
+---
+
+## 8. Final E2E production certification addendum (2026-08-26)
+
+### Real LLM end-to-end (provider: `opencode`, model: `x-preview-f-free`, credentials via machine-authenticated provider store; never exported)
+
+Complex autonomous coding task against the hardened release binary (`0.0.0-harden-production-202608260440`):
+scratch repository `taskflow` seeded with a latent bug (lookup ignored its `id` argument) + failing test.
+
+Recorded run `ses_fc33a0edfffeqtomAnCETescSI`:
+- Agent workflow observed (server-side log + message transcript): `bash`(run tests) ? `glob` ? `read`×3 ? `edit`(fix) ? `bash`(retest) ? `edit`(add regression test) ? `bash`(final suite)
+- Mid-task the provider returned `Service Unavailable`; **the agent retried automatically and completed** — live recovery from real provider failure
+- Independent verification of the work product: minimal correct fix (`db.find(t => t.id === id)`), no test-weakening, constraints honored (store.ts untouched), regression test valid; independent `bun test`: `2 pass / 0 fail`
+- Session continuity: follow-up question answered exactly from prior context without re-reading files
+- Cancellation: mid-subprocess abort killed the child process (1 running ? 0 orphans), turn terminated, server healthy
+
+### Extended soak (480 s, mixed workload incl. session creation)
+2,120 ops / 0 errors; handles 292?290, threads 31?29 (flat); WS sawtooth 274?427?355 MB (GC, non-monotonic).
+
+### Release artifact
+Standalone copy of `opencode.exe` (168.6 MB) runs from an empty directory:
+`--version` ? `0.0.0-harden-production-202608260440`
+SHA256 `9FE1D8F4E6C6356C55C9AB41A7BB05331D66A7B58B9CB08B0B1FBCEC3182532E`
+
+### Hostile-config resilience
+Broken stdio MCP server configured into project config ? instance/session creation and `/global/health` unaffected (deep MCP lifecycle covered by upstream `mcp/*` suites, all green).
+
+### Source-level delta sweep vs v1.18.14 (26 files)
+No debug leftovers, no new TODOs/FIXMEs in code, no secret patterns, all changes classified in this document.
