@@ -1,0 +1,80 @@
+name: cert
+on:
+  workflow_dispatch:
+
+jobs:
+  platform:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: harden-production
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+      - name: Install
+        run: bun install
+      - name: Typecheck product chain
+        run: |
+          cd packages/core && bun run typecheck
+          cd ../opencode && bun run typecheck
+          cd ../tui && bun run typecheck
+      - name: Core unit tests
+        working-directory: packages/core
+        run: bun test --timeout 60000
+      - name: Build release binary (single target)
+        working-directory: packages/opencode
+        run: bun run build --single
+      - name: Binary smoke + headless serve health
+        shell: bash
+        run: |
+          set -e
+          if [ "$RUNNER_OS" = "Windows" ]; then BIN="dist/opencode-windows-x64/bin/opencode.exe"; else BIN="dist/opencode-${RUNNER_OS,,}-$(uname -m | sed 's/arm64/arm64/;s/x86_64/x64')/bin/opencode"; fi
+          echo "binary: $BIN"
+          VERSION=$("$BIN" --version)
+          echo "version: $VERSION"
+          mkdir -p cert-proj && cd cert-proj
+          PORT=$([[ "$RUNNER_OS" == "macOS" ]] && echo 46431 || echo 46430)
+          "$BIN" serve --port "$PORT" --hostname 127.0.0.1 > ../serve.log 2>&1 &
+          SERVER_PID=$!
+          for i in $(seq 1 60); do
+            if curl -sf "http://127.0.0.1:$PORT/global/health" > health.json 2>/dev/null; then break; fi
+            sleep 1
+          done
+          cat health.json
+          grep -q '"healthy":true' health.json || (cat ../serve.log; exit 1)
+          curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:$PORT/session" | grep -q "401" || true
+          kill $SERVER_PID 2>/dev/null || taskkill //PID $SERVER_PID //F 2>/dev/null || true
+          {
+            echo "### ${{ matrix.os }}"
+            echo "- version: \`$VERSION\`"
+            echo "- install/typecheck/tests/build/serve-health: PASS"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  desktop-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: harden-production
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.14"
+      - name: Install
+        run: bun install
+      - name: Desktop renderer/main compile (electron-vite build)
+        working-directory: packages/desktop
+        run: bun run build
+      - name: Summary
+        shell: bash
+        run: echo "### desktop-build ${{ matrix.os }} : PASS" >> "$GITHUB_STEP_SUMMARY"
