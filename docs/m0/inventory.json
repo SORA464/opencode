@@ -1,0 +1,39 @@
+{
+  "generatedAt": "2026-08-26T00:00:00Z",
+  "commit": "f7ff815fc",
+  "counts": {
+    "trackedFiles": 6427,
+    "symlinkEntries": 58,
+    "workspacesWithPackageJson": 31,
+    "opencodeTopLevelSrcDirs": 36,
+    "coreTopLevelSrcDirs": 29,
+    "httpApiGroups": 17,
+    "cliCommands": 25,
+    "toolsV1": 14,
+    "toolsV2Builtins": 12,
+    "providerLoaders": 25,
+    "tuiHostSlots": 10
+  },
+  "workspaces": [
+    {"path": "packages/opencode", "name": "opencode", "kind": "cli"},
+    {"path": "packages/core", "name": "@opencode-ai/core", "kind": "package"},
+    {"path": "packages/server", "name": "@opencode-ai/server", "kind": "package"},
+    {"path": "packages/protocol", "name": "@opencode-ai/protocol", "kind": "package"},
+    {"path": "packages/schema", "name": "@opencode-ai/schema", "kind": "package"},
+    {"path": "packages/llm", "name": "@opencode-ai/llm", "kind": "package"},
+    {"path": "packages/plugin", "name": "@opencode-ai/plugin", "kind": "package"},
+    {"path": "packages/client", "name": "@opencode-ai/client", "kind": "package"},
+    {"path": "packages/sdk-next", "name": "@opencode-ai/sdk-next", "kind": "package"},
+    {"path": "packages/sdk/js", "name": "@opencode-ai/sdk", "kind": "package"},
+    {"path": "packages/tui", "name": "@opencode-ai/tui", "kind": "package"},
+    {"path": "packages/app", "name": "@opencode-ai/app", "kind": "app"},
+    {"path": "packages/desktop", "name": "@opencode-ai/desktop", "kind": "app"},
+    {"path": "packages/ui", "name": "@opencode-ai/ui", "kind": "package"},
+    {"path": "packages/session-ui", "name": "@opencode-ai/session-ui", "kind": "package"}
+  ],
+  "runtimeTopology": {
+    "processes": ["CLI (Bun)", "Server (NodeHttpServer + Effect)", "TUI main+Worker", "Desktop Main + Sidecars v1/v2", "SessionExecution per-Session fibers"]
+  },
+  "layering": "schema <- {protocol, llm} <- core <- server <- opencode <- frontends via sdk/client",
+  "notes": "Machine-readable baseline for change detection. Regenerate via harness/m0/inventory.ts and diff against this file."
+}
