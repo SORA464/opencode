@@ -1,0 +1,11 @@
+name: cert-min
+on:
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: hello
+        run: echo ok
