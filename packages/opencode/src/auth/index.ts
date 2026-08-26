@@ -59,7 +59,12 @@ const layer = Layer.effect(
       if (process.env.OPENCODE_AUTH_CONTENT) {
         try {
           return JSON.parse(process.env.OPENCODE_AUTH_CONTENT)
-        } catch (err) {}
+        } catch (err) {
+          console.error(
+            "opencode: ignoring malformed OPENCODE_AUTH_CONTENT:",
+            err instanceof Error ? err.message : err,
+          )
+        }
       }
 
       const data = (yield* fsys.readJson(file).pipe(Effect.orElseSucceed(() => ({})))) as Record<string, unknown>

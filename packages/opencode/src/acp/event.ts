@@ -59,9 +59,20 @@ export class Subscription {
   start() {
     if (this.started) return
     this.started = true
-    this.run().catch(() => {
+    this.run().catch((error) => {
       if (this.abort.signal.aborted) return
+      this.warn("event subscription failed", error)
     })
+  }
+
+  private lastWarning?: string
+
+  private warn(message: string, error: unknown) {
+    // Rate-limit duplicate diagnostics so a flapping stream cannot spam output.
+    const text = `${message}: ${error instanceof Error ? error.message : String(error)}`
+    if (text === this.lastWarning) return
+    this.lastWarning = text
+    console.warn(`[acp] ${text}`)
   }
 
   stop() {
@@ -143,7 +154,10 @@ export class Subscription {
 
   private async run() {
     while (!this.abort.signal.aborted) {
-      await this.consume().catch(() => {})
+      await this.consume().catch((error) => {
+        if (this.abort.signal.aborted) return
+        this.warn("event stream consume failed, retrying", error)
+      })
       this.disconnected()
       if (!this.abort.signal.aborted) await new Promise((resolve) => setTimeout(resolve, 1000))
     }
@@ -160,7 +174,10 @@ export class Subscription {
     for await (const event of events.stream) {
       if (this.abort.signal.aborted) return
       if (!event.payload) continue
-      await this.handle(event.payload).catch(() => {})
+      await this.handle(event.payload).catch((error) => {
+        if (this.abort.signal.aborted) return
+        this.warn(`event handler failed for ${event.payload?.type}`, error)
+      })
     }
   }
 

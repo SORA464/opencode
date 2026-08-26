@@ -1,6 +1,6 @@
 export * as BackgroundJob from "./background-job"
 
-import { Cause, Clock, Context, Deferred, Effect, Exit, Layer, Scope, SynchronizedRef } from "effect"
+import { Cause, Clock, Context, Deferred, Effect, Exit, Layer, Schedule, Scope, SynchronizedRef } from "effect"
 import { Identifier } from "./id/id"
 import { makeGlobalNode } from "./effect/app-node"
 
@@ -111,6 +111,51 @@ function errorText(error: unknown) {
 }
 
 /**
+ * Finished jobs are retained briefly so callers can observe their terminal
+ * status, then evicted: the registry is process-local and must not grow
+ * without bound over long server uptimes. Pure so it stays unit-testable.
+ */
+export const FINISHED_JOB_RETENTION_MS = 60 * 60 * 1000
+export const FINISHED_JOB_MAX = 500
+export const FINISHED_JOB_SWEEP_INTERVAL_MS = 5 * 60 * 1000
+
+export function pruneFinished<T extends { info: { status: string; completed_at?: number }; token: object }>(
+  jobs: Map<string, T>,
+  now: number,
+  retentionMs = FINISHED_JOB_RETENTION_MS,
+  maxFinished = FINISHED_JOB_MAX,
+): { map: Map<string, T>; removed: string[] } {
+  const map = new Map<string, T>()
+  const removed: string[] = []
+  const cutoff = now - retentionMs
+  let finishedCount = 0
+  const finishedOldestFirst: [string, number][] = []
+  for (const [id, job] of jobs) {
+    if (job.info.status !== "running") {
+      if (job.info.completed_at !== undefined && job.info.completed_at <= cutoff) {
+        removed.push(id)
+        continue
+      }
+      finishedCount++
+      if (job.info.completed_at !== undefined) finishedOldestFirst.push([id, job.info.completed_at])
+    }
+    map.set(id, job)
+  }
+  // Hard cap: evict oldest finished entries even before their TTL expires,
+  // preserving capacity for live work.
+  const kept = Math.max(0, maxFinished - (map.size - finishedCount))
+  if (finishedCount > kept) {
+    finishedOldestFirst.sort((a, b) => a[1] - b[1])
+    for (const [id] of finishedOldestFirst.slice(0, finishedCount - kept)) {
+      map.delete(id)
+      removed.push(id)
+    }
+  }
+  return { map, removed }
+}
+
+
+/**
  * Makes one scoped, process-local registry. Entries are intentionally not
  * durable: process restart or owner-scope closure loses status and interrupts
  * live work. Persisted observation, restart recovery, and remote workers need a
@@ -122,6 +167,22 @@ export const make = Effect.gen(function* () {
     jobs: yield* SynchronizedRef.make(new Map()),
     scope: yield* Scope.Scope,
   }
+
+  const sweep = Effect.fn("BackgroundJob.sweep")(function* () {
+    const now = yield* Clock.currentTimeMillis
+    const { removed } = yield* SynchronizedRef.modify(state.jobs, (jobs) => {
+      const pruned = pruneFinished(jobs, now)
+      return [pruned, pruned.map] as const
+    })
+    if (removed.length > 0) yield* Effect.logDebug(`BackgroundJob evicted ${removed.length} finished job(s)`)
+  })
+
+  // Periodic eviction keeps the process-local registry bounded over long
+  // server uptimes; see pruneFinished for the retention/cap policy.
+  yield* sweep().pipe(
+    Effect.repeat(Schedule.spaced(FINISHED_JOB_SWEEP_INTERVAL_MS)),
+    Effect.forkIn(state.scope, { startImmediately: true }),
+  )
 
   const settle = Effect.fn("BackgroundJob.settle")(function* (
     id: string,

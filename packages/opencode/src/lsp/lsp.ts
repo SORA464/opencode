@@ -109,10 +109,25 @@ const filterExperimentalServers = (servers: Record<string, LSPServer.Info>, flag
 
 type LocInput = { file: string; line: number; character: number }
 
+// A failed spawn/config-load disables that server only briefly so one transient
+// failure (e.g. network blip during auto-install) cannot permanently kill
+// language features for the instance lifetime.
+export const LSP_RETRY_COOLDOWN_MS = 60_000
+
+function brokenRecently(state: State, key: string) {
+  const at = state.broken.get(key)
+  if (at === undefined) return false
+  if (Date.now() - at >= LSP_RETRY_COOLDOWN_MS) {
+    state.broken.delete(key)
+    return false
+  }
+  return true
+}
+
 interface State {
   clients: LSPClient.Info[]
   servers: Record<string, LSPServer.Info>
-  broken: Set<string>
+  broken: Map<string, number>
   spawning: Map<string, Promise<LSPClient.Info | undefined>>
 }
 
@@ -191,7 +206,7 @@ const layer = Layer.effect(
         const s: State = {
           clients: [],
           servers,
-          broken: new Set(),
+          broken: new Map(),
           spawning: new Map(),
         }
 
@@ -218,11 +233,11 @@ const layer = Layer.effect(
           const handle = await server
             .spawn(root, ctx, flags)
             .then((value) => {
-              if (!value) s.broken.add(key)
+              if (!value) s.broken.set(key, Date.now())
               return value
             })
             .catch(() => {
-              s.broken.add(key)
+              s.broken.set(key, Date.now())
               return undefined
             })
 
@@ -234,7 +249,7 @@ const layer = Layer.effect(
             directory: ctx.directory,
             instance: ctx,
           }).catch(async () => {
-            s.broken.add(key)
+            s.broken.set(key, Date.now())
             await Process.stop(handle.process)
             return undefined
           })
@@ -256,7 +271,7 @@ const layer = Layer.effect(
 
           const root = await server.root(file, ctx)
           if (!root) continue
-          if (s.broken.has(root + server.id)) continue
+          if (brokenRecently(s, root + server.id)) continue
 
           const match = s.clients.find((x) => x.root === root && x.serverID === server.id)
           if (match) {
@@ -334,7 +349,7 @@ const layer = Layer.effect(
           if (server.extensions.length && !server.extensions.includes(extension)) continue
           const root = await server.root(file, ctx)
           if (!root) continue
-          if (s.broken.has(root + server.id)) continue
+          if (brokenRecently(s, root + server.id)) continue
           return true
         }
         return false
