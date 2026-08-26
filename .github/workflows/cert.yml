@@ -77,4 +77,5 @@ jobs:
         run: bun run build
       - name: Summary
         shell: bash
-        run: echo "### desktop-build ${{ matrix.os }} : PASS" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "### desktop-build ${{ matrix.os }} : PASS" >> "$GITHUB_STEP_SUMMARY"
