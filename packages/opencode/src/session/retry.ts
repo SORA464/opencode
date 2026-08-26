@@ -27,6 +27,18 @@ export const RETRY_INITIAL_DELAY = 2000
 export const RETRY_BACKOFF_FACTOR = 2
 export const RETRY_MAX_DELAY_NO_HEADERS = 30_000 // 30 seconds
 export const RETRY_MAX_DELAY = 2_147_483_647 // max 32-bit signed integer for setTimeout
+// Wall-clock ceiling on cumulative retrying for one provider turn. Prevents
+// indefinite retry loops (e.g. a provider returning retry-after forever) while
+// still allowing long provider-directed waits such as daily quota resets.
+export const RETRY_BUDGET_MS_DEFAULT = 24 * 60 * 60 * 1000
+
+export function retryBudgetMs() {
+  const raw = process.env.OPENCODE_RETRY_BUDGET_MS
+  if (!raw) return RETRY_BUDGET_MS_DEFAULT
+  const parsed = Number.parseFloat(raw)
+  if (!Number.isFinite(parsed) || parsed <= 0) return RETRY_BUDGET_MS_DEFAULT
+  return parsed
+}
 
 const RETRYABLE_MESSAGE_PATTERNS = [
   /429|500|502|503|504|524/i,

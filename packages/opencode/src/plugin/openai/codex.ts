@@ -12,6 +12,7 @@ const ISSUER = "https://auth.openai.com"
 const CODEX_API_ENDPOINT = "https://chatgpt.com/backend-api/codex/responses"
 const OAUTH_PORT = 1455
 const OAUTH_POLLING_SAFETY_MARGIN_MS = 3000
+const OAUTH_POLLING_DEADLINE_MS = 15 * 60 * 1000
 const ALLOWED_MODELS = new Set(["gpt-5.5", "gpt-5.3-codex-spark", "gpt-5.4", "gpt-5.4-mini"])
 const DISALLOWED_MODELS = new Set(["gpt-5.5-pro"])
 
@@ -484,7 +485,13 @@ export async function CodexAuthPlugin(input: PluginInput, options: CodexAuthPlug
               instructions: `Enter code: ${deviceData.user_code}`,
               method: "auto" as const,
               async callback() {
+                // Device codes expire (~15 min per RFC 8628); bound the poll
+                // loop so a stale dialog cannot poll the IdP forever.
+                const deadline = Date.now() + OAUTH_POLLING_DEADLINE_MS
                 while (true) {
+                  if (Date.now() >= deadline) {
+                    return { type: "failed" as const }
+                  }
                   const response = await fetch(`${ISSUER}/api/accounts/deviceauth/token`, {
                     method: "POST",
                     headers: {

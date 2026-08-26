@@ -672,6 +672,18 @@ const layer = Layer.effect(
                 },
               }),
             ),
+            // Hard wall-clock ceiling on cumulative retrying (including
+            // backoff/header-directed waits) so no provider error pattern can
+            // keep a session retrying indefinitely. See SessionRetry.retryBudgetMs.
+            Effect.timeoutOrElse({
+              duration: SessionRetry.retryBudgetMs(),
+              orElse: () =>
+                Effect.die(
+                  new Error(
+                    `Provider retry budget exhausted after ${Math.round(SessionRetry.retryBudgetMs() / 1000)}s of retries`,
+                  ),
+                ),
+            }),
             Effect.catch(halt),
             Effect.ensuring(cleanup()),
           )
