@@ -215,24 +215,36 @@ describe("ModelsDev Service", () => {
 
   it.live("refresh(true) fetches via HttpClient and updates the cache", () =>
     Effect.gen(function* () {
-      yield* writeCache(fixture)
-      const state = yield* Ref.make({ ...initialState, body: JSON.stringify(fixture2) })
-      const result = yield* provided(
-        state,
+      // Isolate from host environment: OPENCODE_CLIENT (e.g. "desktop" on dev
+      // machines) otherwise leaks into the request user-agent assertion below.
+      const originalClient = process.env.OPENCODE_CLIENT
+      process.env.OPENCODE_CLIENT = "cli"
+      yield* Effect.ensuring(
         Effect.gen(function* () {
-          const svc = yield* ModelsDev.Service
-          const before = yield* svc.get()
-          yield* svc.refresh(true)
-          const after = yield* svc.get()
-          return { before, after }
+          yield* writeCache(fixture)
+          const state = yield* Ref.make({ ...initialState, body: JSON.stringify(fixture2) })
+          const result = yield* provided(
+            state,
+            Effect.gen(function* () {
+              const svc = yield* ModelsDev.Service
+              const before = yield* svc.get()
+              yield* svc.refresh(true)
+              const after = yield* svc.get()
+              return { before, after }
+            }),
+          )
+          expect(result.before).toEqual(fixture)
+          expect(result.after).toEqual(fixture2)
+          const final = yield* Ref.get(state)
+          expect(final.calls.length).toBe(1)
+          expect(final.calls[0].url).toContain("/api.json")
+          expect(final.calls[0].userAgent).toContain("/cli")
+        }),
+        Effect.sync(() => {
+          if (originalClient === undefined) delete process.env.OPENCODE_CLIENT
+          else process.env.OPENCODE_CLIENT = originalClient
         }),
       )
-      expect(result.before).toEqual(fixture)
-      expect(result.after).toEqual(fixture2)
-      const final = yield* Ref.get(state)
-      expect(final.calls.length).toBe(1)
-      expect(final.calls[0].url).toContain("/api.json")
-      expect(final.calls[0].userAgent).toContain("/cli")
     }),
   )
 
