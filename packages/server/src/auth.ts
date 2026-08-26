@@ -1,6 +1,7 @@
 export * as ServerAuth from "./auth"
 
 import { Config as EffectConfig, Context, Effect, Layer, Option, Redacted } from "effect"
+import { createHash, timingSafeEqual } from "crypto"
 
 export type Credentials = {
   password?: string
@@ -41,11 +42,20 @@ export function required(config: Info) {
   return Option.isSome(config.password) && config.password.value !== ""
 }
 
+/**
+ * Length-independent constant-time string comparison: both sides are hashed to
+ * fixed-length digests before timingSafeEqual so short inputs cannot short-
+ * circuit on length mismatch.
+ */
+function safeEqual(a: string, b: string) {
+  return timingSafeEqual(createHash("sha256").update(a).digest(), createHash("sha256").update(b).digest())
+}
+
 export function authorized(credentials: DecodedCredentials, config: Info) {
   return (
     Option.isSome(config.password) &&
-    credentials.username === config.username &&
-    Redacted.value(credentials.password) === config.password.value
+    safeEqual(credentials.username, config.username) &&
+    safeEqual(Redacted.value(credentials.password), config.password.value)
   )
 }
 

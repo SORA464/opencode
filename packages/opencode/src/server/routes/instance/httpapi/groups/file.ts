@@ -5,6 +5,7 @@ import { Schema } from "effect"
 import { HttpApi, HttpApiEndpoint, HttpApiGroup, OpenApi } from "effect/unstable/httpapi"
 import { Authorization } from "../middleware/authorization"
 import { InstanceContextMiddleware } from "../middleware/instance-context"
+import { InvalidRequestError } from "../errors"
 import {
   WorkspaceRoutingMiddleware,
   WorkspaceRoutingQuery,
@@ -138,6 +139,7 @@ export const FileApi = HttpApi.make("file")
         HttpApiEndpoint.get("list", FilePaths.list, {
           query: FileQuery,
           success: described(Schema.Array(LegacyEntry), "Files and directories"),
+          error: InvalidRequestError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "file.list",
@@ -148,6 +150,7 @@ export const FileApi = HttpApi.make("file")
         HttpApiEndpoint.get("content", FilePaths.content, {
           query: FileQuery,
           success: described(LegacyContent, "File content"),
+          error: InvalidRequestError,
         }).annotateMerge(
           OpenApi.annotations({
             identifier: "file.read",
