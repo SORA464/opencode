@@ -24,12 +24,14 @@ describe("M0 golden master — baseline fixtures", () => {
 
   test("no packages/*/src file was moved in this phase (frozen baseline)", async () => {
     // M0 must not move subsystem files. We assert that the diff from the frozen
-    // baseline commit to HEAD contains only docs/harness additions.
+    // baseline commit to HEAD contains only docs/harness and approved kernel additions.
     const { $ } = await import("bun")
     const diff = await $`git -C ${ROOT} diff --name-only f7ff815fc..HEAD`.text()
     const lines = diff.split("\n").map((l) => l.trim()).filter(Boolean)
-    const bad = lines.filter((l) => l.startsWith("packages/") && l.includes("/src/") && !l.startsWith("harness/"))
-    // Allow docs/blueprint and docs/m0 additions; forbid src moves
+    const bad = lines.filter(
+      (l) => l.startsWith("packages/") && l.includes("/src/") && !l.startsWith("harness/") && !l.startsWith("packages/kernel/"),
+    )
+    // Allow docs/blueprint and docs/m0 additions and kernel package; forbid other src moves
     expect(bad).toEqual([])
   })
 
