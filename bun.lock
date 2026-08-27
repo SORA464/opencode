@@ -538,6 +538,14 @@
         "@typescript/native-preview": "catalog:",
       },
     },
+    "packages/kernel": {
+      "name": "@opencode-ai/kernel",
+      "version": "1.18.14",
+      "dependencies": {
+        "@opencode-ai/core": "workspace:*",
+        "effect": "4.0.0-beta.83",
+      },
+    },
     "packages/llm": {
       "name": "@opencode-ai/llm",
       "version": "1.18.14",
@@ -1981,6 +1989,8 @@
     "@opencode-ai/http-recorder": ["@opencode-ai/http-recorder@workspace:packages/http-recorder"],
 
     "@opencode-ai/httpapi-codegen": ["@opencode-ai/httpapi-codegen@workspace:packages/httpapi-codegen"],
+
+    "@opencode-ai/kernel": ["@opencode-ai/kernel@workspace:packages/kernel"],
 
     "@opencode-ai/llm": ["@opencode-ai/llm@workspace:packages/llm"],
 
