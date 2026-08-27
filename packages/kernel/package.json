@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "@opencode-ai/kernel",
+  "version": "1.18.14",
+  "description": "OpenCode minimal kernel — runtime substrate, lifecycle, service registry, event system",
+  "type": "module",
+  "license": "MIT",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./runtime": "./src/runtime.ts",
+    "./service-registry": "./src/service-registry.ts",
+    "./event-registry": "./src/event-registry.ts",
+    "./dependency-graph": "./src/dependency-graph.ts",
+    "./plugin-loader": "./src/plugin-loader.ts",
+    "./composition-loader": "./src/composition-loader.ts",
+    "./permission": "./src/permission.ts",
+    "./config": "./src/config.ts",
+    "./compatibility": "./src/compatibility.ts",
+    "./manifest": "./src/manifest.ts"
+  },
+  "scripts": {
+    "typecheck": "tsgo --noEmit",
+    "test": "bun test --only-failures"
+  },
+  "dependencies": {
+    "@opencode-ai/core": "workspace:*",
+    "effect": "4.0.0-beta.83"
+  }
+}
