@@ -23,6 +23,13 @@ export * as TimeoutCancellation from "./providers/timeout-cancellation"
 export * as ErrorNormalization from "./providers/error-normalization"
 export * as Failover from "./providers/failover"
 export * as ModelResolution from "./providers/model-resolution"
+export * as AgentContract from "./agents/agent-contract"
+export * as AgentInstanceModel from "./agents/agent-instance-model"
+export * as AgentTurnContract from "./agents/agent-turn-contract"
+export * as AgentStepContract from "./agents/agent-step-contract"
+export * as AgentRegistry from "./agents/agent-registry"
+export * as AgentManifest from "./agents/agent-manifest"
+export * as AgentLoader from "./agents/agent-loader"
 
 export const KERNEL_VERSION = "1.18.14" as const
 export const KERNEL_API_VERSION = "1" as const

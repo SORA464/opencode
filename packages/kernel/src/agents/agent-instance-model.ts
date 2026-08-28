@@ -1,0 +1,17 @@
+/**
+ * K-M5 — Agent instance lifecycle (canonical)
+ */
+export type AgentLifecycle = "PENDING" | "INITIALIZING" | "RUNNING" | "WAITING" | "PAUSED" | "CANCELLING" | "COMPLETING" | "COMPLETED" | "FAILED" | "QUARANTINED"
+
+export const VALID_TRANSITIONS: Record<AgentLifecycle, ReadonlyArray<AgentLifecycle>> = {
+  PENDING: ["INITIALIZING", "FAILED"],
+  INITIALIZING: ["RUNNING", "FAILED"],
+  RUNNING: ["WAITING", "PAUSED", "CANCELLING", "COMPLETING", "FAILED"],
+  WAITING: ["RUNNING", "CANCELLING", "FAILED"],
+  PAUSED: ["RUNNING", "CANCELLING", "FAILED"],
+  CANCELLING: ["COMPLETED", "FAILED"],
+  COMPLETING: ["COMPLETED", "FAILED"],
+  COMPLETED: [],
+  FAILED: ["PENDING"],
+  QUARANTINED: ["PENDING"],
+}
