@@ -30,6 +30,14 @@ export * as AgentStepContract from "./agents/agent-step-contract"
 export * as AgentRegistry from "./agents/agent-registry"
 export * as AgentManifest from "./agents/agent-manifest"
 export * as AgentLoader from "./agents/agent-loader"
+export * as ExecWorld from "./execution/execution-world"
+export * as ExecWorldRegistry from "./execution/registry"
+export * as CodeRuntime from "./code-runtime/runtime"
+export * as GeneratedSdk from "./code-runtime/generated-sdk"
+export * as CodeMode from "./code-mode/code-mode"
+export * as ReactLoop from "./agent-loop/react-loop"
+export * as MultiAgent from "./agent-loop/multi-agent"
+export * as Modes from "./profiles/modes"
 
 export const KERNEL_VERSION = "1.18.14" as const
 export const KERNEL_API_VERSION = "1" as const

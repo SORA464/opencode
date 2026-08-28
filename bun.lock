@@ -545,6 +545,10 @@
         "@opencode-ai/core": "workspace:*",
         "effect": "4.0.0-beta.83",
       },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "@types/node": "catalog:",
+      },
     },
     "packages/llm": {
       "name": "@opencode-ai/llm",
