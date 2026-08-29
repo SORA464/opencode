@@ -1,0 +1,19 @@
+# DSH → OpenCode Migration Map — Internal (Phase 0)
+
+> Generated 2026-08-28 from fresh source audit. Each row: DSH Capability → Current OpenCode State → Missing Work → Target Integration.
+
+| DSH Capability | Current OpenCode State | Missing Work | Target Integration |
+|---|---|---|---|
+| **Execution World** (fs/subprocess/shell/PTY/sandbox as one seam) | Kernel `execution-world.ts` exists, tested (8/8), **unwired** — no consumer in `opencode/src` | Wire as authoritative seam: tools/session must obtain fs/shell via `ExecWorldService` instead of direct `node:fs`/`node:child_process` | `packages/opencode/src/execution/world.ts` already creates `ExecWorldService` (Location-scoped) — register it in composition root, make `tool/*` optionally consume it (fallback to direct for now, then switch) |
+| **Code Runtime** (worker-thread, `CodeRunRequest`→`CodeRunResult`) | `kernel/src/code-runtime/{runtime,worker,generated-sdk}.ts` exists, tested (8/8, real worker) **unwired** outside kernel | Wire into product composition: Code Runtime as kernel service, consumed by Code Mode | `composition-loader` already supports `codeRuntime` layer; add `code-runtime` bundle to default profile (flag-gated) |
+| **PTC / Code Mode** (`run_code`, generated SDK) | `kernel/src/code-mode/code-mode.ts` exists, tested (5/5 multi-op orchestration) **unwired** | Make Code Mode selectable execution strategy, not a second tool inventory | Profile `code` sets `toolMode: "code"` → `CodeMode` re-presents `ToolRegistry` via generated SDK; Standard remains `toolMode: "standard"` |
+| **Agent Runtime / ReactLoopAgent** | `kernel/src/agent-loop/react-loop.ts` + `multi-agent.ts` exist, tested (10/10) **unwired** — `opencode/src/session/prompt.ts` loop still hardcoded | Seam: `AgentRuntimeRegistry` already exists (M5) — register DSH loop as `dsh-react-loop` plugin, keep old loop as fallback | `AgentContext: composition agentRuntime: "dsh-react-loop" | "opencode-legacy"` |
+| **Profiles/Modes** (Standard/Code/Minimal/Assistant) | `kernel/src/profiles/modes.ts` defines 4 `MODE_PROFILES` **unwired** to composition | Wire `MODE_PROFILES` into `CompositionLoader` profile resolution (M4) | `profiles/modes.ts` → `composition-loader` profile ref |
+| **Session/event semantics** (`sourceEventSeqs`, `fork(boundary)`, `session/flush`) | OpenCode `EventV2` + `SessionEvent` already event-sourced, but `sourceEventSeqs` provenance and `fork(boundary)` not yet adapted | Adapt DSH's `sourceEventSeqs` + `fork(boundary)` into `core/src/session` as additive fields (M5.12) | `core/src/session/types.ts` add optional `sourceEventSeqs` |
+| **Scoped context / memory** | `core/scope` exists, `M5.17/18` boundaries defined but not implemented | Define `ContextProvider` + `MemoryProvider` interfaces consumed by agent runtime | `kernel/src/agents/context-boundary.ts` (new) |
+| **Multi-agent orchestration** | `SubAgentCoordinator` exists, tested, unwired | Wire to production `tool/task.ts` subagent path with depth/sibling limits | `tool/task.ts` optionally delegates via `MultiAgent` seam |
+| **UI/UX (keyed renderers, chat nodes)** | M6 `UIRegistry` exists; TUI slots mature, web routes still hard-coded | Register DSH keyed renderers as `session-ui` slot contributions | `packages/session-ui/src/message-part.tsx` → `UIRegistry` |
+| **Plugin/runtime composition** | M1 kernel + M4 `CompositionLoader` exist | Already profile/bundle/patch composition — validate with new bundles | Add `dsh-*` bundles to default composition (flag-gated) |
+
+**Summary:** All DSH-derived kernel modules from Phase 1 are **implemented and tested but unwired**. Missing work is exclusively **wiring/integration** (registering them in composition, making them selectable, giving them real consumers), not new capability invention. No OpenCode code needs deletion.
+

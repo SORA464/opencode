@@ -1,16 +1,15 @@
 /**
  * M6-M7 — DSH Agent Loop integration behind M5 AgentContract
  */
-import { reactLoop, makeReactAgent } from "@opencode-ai/kernel/src/agent-loop/react-loop"
-import type { AgentInput, AgentOutput } from "@opencode-ai/kernel/src/agents/agent-contract"
+import { ReactLoop, AgentContract } from "@opencode-ai/kernel"
 
 export type DshAgentAdapter = {
   readonly id: string
-  readonly execute: (input: AgentInput) => Promise<AgentOutput>
+  readonly execute: (input: AgentContract.AgentInput) => Promise<AgentContract.AgentOutput>
 }
 
 export function makeDshAgentLoop(): DshAgentAdapter {
-  return makeReactAgent({
+  return ReactLoop.makeReactAgent({
     provider: "opencode",
     model: "x-preview-f-free",
     systemPrompt: "You are a helpful coding assistant.",

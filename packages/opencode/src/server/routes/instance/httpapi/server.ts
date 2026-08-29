@@ -48,6 +48,9 @@ import { Storage } from "@/storage/storage"
 import { ToolRegistry } from "@/tool/registry"
 import { Truncate } from "@/tool/truncate"
 import { Worktree } from "@/worktree"
+import { node as ExecWorldNode } from "@/execution/world"
+import { node as CodeRuntimeNode } from "@/code-runtime/service"
+import { node as AgentLoopNode } from "@/agent-loop/service"
 import { RuntimeFlags } from "@/effect/runtime-flags"
 import { MoveSession } from "@opencode-ai/core/control-plane/move-session"
 import { Database } from "@opencode-ai/core/database/database"
@@ -266,6 +269,9 @@ const app = LayerNode.group([
   ProjectV2.node,
   ProjectCopy.node,
   PtyTicket.node,
+  ExecWorldNode,
+  CodeRuntimeNode,
+  AgentLoopNode,
 ])
 
 export function createRoutes(

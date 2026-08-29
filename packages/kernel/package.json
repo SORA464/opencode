@@ -17,7 +17,15 @@
     "./permission": "./src/permission.ts",
     "./config": "./src/config.ts",
     "./compatibility": "./src/compatibility.ts",
-    "./manifest": "./src/manifest.ts"
+    "./manifest": "./src/manifest.ts",
+    "./execution/*": "./src/execution/*.ts",
+    "./code-runtime/*": "./src/code-runtime/*.ts",
+    "./code-mode/*": "./src/code-mode/*.ts",
+    "./agent-loop/*": "./src/agent-loop/*.ts",
+    "./profiles/*": "./src/profiles/*.ts",
+    "./tools/*": "./src/tools/*.ts",
+    "./providers/*": "./src/providers/*.ts",
+    "./agents/*": "./src/agents/*.ts"
   },
   "scripts": {
     "typecheck": "tsgo --noEmit",
