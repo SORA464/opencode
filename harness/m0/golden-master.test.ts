@@ -33,8 +33,11 @@ describe("M0 golden master — baseline fixtures", () => {
       "packages/kernel/",
       "packages/opencode/src/execution/",
       "packages/opencode/src/code-mode/",
+      "packages/opencode/src/code-runtime/",
       "packages/opencode/src/agent-loop/",
+      "packages/opencode/src/agent/",
       "packages/opencode/src/composition/",
+      "packages/opencode/src/server/routes/instance/httpapi/server.ts",
     ]
     const bad = lines.filter(
       (l) =>
